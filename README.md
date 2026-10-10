@@ -1,84 +1,50 @@
+# Wordle Solver: Information Gain & Strategy Comparison
 
-# Wordle Intelligent Agent: Information Gain & Strategy Comparison
+A Wordle environment and four solving agents, compared on all 2,315 official answer words. The best agent, a hybrid of entropy search and endgame minimax, solves **98.9%** of games within six guesses.
 
-This project investigates different strategies for solving Wordle and evaluates how effectively each strategy can identify the hidden word within the six-guess limit.
+Group project for UCI CS 175 with Bhakti Dave and Duy Nguyen. The project started as a reinforcement learning idea (REINFORCE, DQN), but after more research and professor feedback we switched to an information-theory approach.
 
-The project originally began as an attempt to build a **Reinforcement Learning (RL) agent** for Wordle. After experimenting with RL-based approaches, I found that they were not the most efficient approach for this particular problem. The project therefore shifted toward **information-gain-based strategies**, which can make more informed guesses by selecting words that are expected to reduce the remaining uncertainty.
+## Notes on reinforcement learning
 
-The repository includes multiple agents and an evaluation framework for comparing their performance.
+REINFORCE and DQN agents were prototyped early in the project but are not part of the final evaluation. They were dropped in favor of the information-gain approach, which was a better fit for the problem.
 
-## How Wordle Works
+## Agents
 
-Wordle is a sequential decision-making problem where the agent must identify a hidden five-letter word in at most six attempts.
+| Agent | Strategy |
+|---|---|
+| **Random** | Guesses a random remaining candidate. Used to validate the environment. |
+| **Frequency** | Scores each candidate by the sum of its unique letter frequencies among remaining words. |
+| **Entropy** | Simulates feedback for each guess against all candidates and picks the guess with the highest Shannon entropy (expected information gain). |
+| **Hybrid** | Opens with "slate", uses entropy search through the midgame, then switches to minimax (minimize worst-case remaining candidates) when 5 or fewer candidates remain. A feedback cache avoids recomputing (guess, target) pairs. |
 
-After each guess, the environment returns feedback for each letter:
+## Results
 
-* `0` = gray — the letter is not in the target word
-* `1` = yellow — the letter is in the target word but in the wrong position
-* `2` = green — the letter is in the correct position
+Each agent was run against all 2,315 answer words.
 
-The agent uses this feedback to update its knowledge of the possible target words and select its next guess.
+| Agent | Win rate | Avg guesses (wins) | Avg runtime / game |
+|---|---|---|---|
+| Random | ~0% | n/a | 0.0043 s |
+| Frequency | 79.14% | 4.54 | 0.0044 s |
+| Entropy | 95.77% | 3.59 | 0.0242 s |
+| **Hybrid** | **98.88%** | 3.62 | 0.0033 s |
 
-## Strategies
+The Entropy Agent often picked its final guess at random once only 4-5 candidates remained. The Hybrid Agent's minimax endgame fixed this, and its feedback cache made it faster than plain entropy search.
 
-The project explores several approaches:
+## How Wordle works
 
-### Random Agent
+The agent has six guesses to find a hidden five-letter word. After each guess, every letter is marked gray (not in the word), yellow (in the word, wrong position), or green (correct position). Duplicate letters are handled the way real Wordle does it: greens are assigned first, then yellows only for unmatched remaining letters.
 
-Selects a valid word without using an information-based strategy. This provides a baseline for comparison.
+## Project structure
 
-### Entropy / Information Gain Agent
+- `wordle_env.py`: game environment, feedback generation, candidate filtering
+- `random_agent.py`, `frequency_agent.py`, `entropy_agent.py`, `hybrid_agent.py`: the four agents
+- `evaluate.py`, `benchmark.py`: run agents on all answer words and report win rate, guess distribution, and runtime
+- `play.py`: step-by-step visualization of a single game
+- word lists: 14,855 valid guesses and 2,315 answers
 
-Selects guesses based on their expected information gain. The goal is to choose a word that is likely to produce feedback that eliminates a large portion of the remaining candidate words.
+## Run
 
-### Reinforcement Learning Agents
-
-The project also includes RL-based implementations, including REINFORCE and DQN approaches.
-
-These were explored as potential solutions to the sequential decision-making problem, but experimental results showed that RL was not the most efficient approach for this particular task compared with information-gain-based methods.
-
-This comparison was an important part of the project: rather than assuming that a more complex learning-based approach would perform better, I evaluated different strategies and compared their results.
-
-## Evaluation
-
-Agents are evaluated using multiple metrics, including:
-
-* **Win rate** — percentage of games solved within six guesses
-* **Average guesses** — average number of guesses required to solve a game
-* **Consistency** — variation in performance across games
-* **Runtime** — computational cost of selecting guesses
-
-The evaluation framework allows different agents to be tested under the same conditions and compared quantitatively.
-
-## Repository Structure
-
-```text
-wordle-project/
-│
-├── wordle_env.py
-├── valid-wordle-words.txt
-│
-├── agents/
-│   ├── random_agent.py
-│   ├── entropy_agent.py
-│   ├── reinforce_agent.py
-│   └── dqn_agent.py
-│
-├── evaluation/
-│   ├── evaluate.py
-│   └── metrics.py
-│
-├── utils/
-│   ├── feedback.py
-│   └── entropy.py
-│
-├── play.py
-├── train_rl.py
-└── README.md
+```bash
+python benchmark.py   # compare all agents
+python play.py        # watch a single game
 ```
-
-## Key Takeaway
-
-The main goal of the project was not simply to build the most complicated agent possible, but to **experiment with different approaches and determine which strategies were most effective for Wordle**.
-
-The results demonstrated that information-gain-based strategies provided a more efficient approach than the RL methods explored in this project, highlighting the importance of choosing an appropriate method for the structure of the problem rather than relying on model complexity alone.
